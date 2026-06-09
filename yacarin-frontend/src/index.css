@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+@theme {
+  /* Paleta de Colores Yacarín */
+  --color-yacar-crema: #FDFBF7;
+  --color-yacar-surface: #F0F6F9;
+  --color-yacar-texto: #2C3E50;
+  --color-yacar-azul: #5FA8D3;
+  --color-yacar-rosa: #EF9F9F;
+  --color-yacar-amarillo: #FCEB77;
+  --color-yacar-verde: #A3B18A;
+
+  /* Tipografías */
+  --font-titulos: 'Quicksand', sans-serif;
+  --font-cuerpo: 'Poppins', sans-serif;
+
+  --color-yacar-azul-vivo: #3678A3; /* Tu azul, pero más profundo y saturado */
+  --color-yacar-coral: #E07A7A; /* Tu rosa, llevado a un tono coral vibrante */
+  --color-yacar-dorado: #DDA15E; /* Una versión viva y fuerte de los tonos crema/amarillos */
+  /* Bordes Suaves */
+  --radius-suave: 16px;
+  --radius-pildora: 9999px;
+}
+
+body {
+  background-color: var(--color-yacar-crema);
+  color: var(--color-yacar-texto);
+  font-family: var(--font-cuerpo);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-titulos);
+}

@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: yacarin_db
+    restart: always
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: rootpassword
+      POSTGRES_DB: yacarin_db
+    ports:
+      - "5433:5432" # Expuesto en el host en el 5433 según el .env original
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - yacarin-network
+
+  backend:
+    build:
+      context: ./yacarin-backend
+    container_name: yacarin_backend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      # Conexión adaptada al contenedor DB
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=root
+      - DB_PASSWORD=rootpassword
+      - DB_NAME=yacarin_db
+      - JWT_SECRET=yacarin_super_secreto_academico_2026
+    depends_on:
+      - db
+    networks:
+      - yacarin-network
+
+  frontend:
+    build:
+      context: ./yacarin-frontend
+    container_name: yacarin_frontend
+    restart: always
+    ports:
+      - "5173:80" # Expone el frontend en localhost:5173
+    depends_on:
+      - backend
+    networks:
+      - yacarin-network
+
+volumes:
+  pgdata:
+
+networks:
+  yacarin-network:
+    driver: bridge
