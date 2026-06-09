@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException, NotFoundException, InternalServerErrorException } from '@nestjs/common';
+import PDFDocument from 'pdfkit';
 import { DataSource } from 'typeorm';
 import { CreateOrdenProduccionDto } from './dto/create-orden-produccion.dto';
 import { OrdenProduccion } from './entities/orden-produccion.entity';
@@ -131,6 +132,55 @@ export class OrdenProduccionService {
   findAll() {
     return this.dataSource.getRepository(OrdenProduccion).find({
       relations: { producto: true, materiales_consumidos: { material: true } },
+    });
+  }
+
+  async generarReportePdf(): Promise<Buffer> {
+    const ordenes = await this.dataSource.getRepository(OrdenProduccion).find({
+      relations: { producto: true },
+      order: { fecha_creacion: 'DESC' }
+    });
+
+    return new Promise((resolve, reject) => {
+      const doc = new PDFDocument({ margin: 50 });
+      const buffers: Buffer[] = [];
+
+      doc.on('data', (buffer) => buffers.push(buffer));
+      doc.on('end', () => resolve(Buffer.concat(buffers)));
+      doc.on('error', reject);
+
+      // --- DISEÑO DEL PDF ---
+      doc.fontSize(20).font('Helvetica-Bold').text('YACARÍN ERP', { align: 'center' });
+      doc.fontSize(10).font('Helvetica').text('Reporte de Órdenes de Producción y Destajo', { align: 'center' });
+      doc.moveDown();
+      doc.text(`Fecha de emisión: ${new Date().toLocaleDateString()}`, { align: 'right' });
+      doc.moveDown(2);
+
+      // Cabeceras
+      doc.font('Helvetica-Bold');
+      doc.text('ID Orden', 50, doc.y, { continued: true, width: 80 });
+      doc.text('Producto', 140, doc.y, { continued: true, width: 180 });
+      doc.text('Cantidad', 330, doc.y, { continued: true, width: 70 });
+      doc.text('Estado', 410, doc.y);
+      doc.moveTo(50, doc.y + 5).lineTo(550, doc.y + 5).stroke();
+      doc.moveDown();
+
+      // Filas
+      doc.font('Helvetica');
+      ordenes.forEach((orden) => {
+        const idCorto = orden.id.substring(0, 8).toUpperCase();
+        doc.text(idCorto, 50, doc.y, { continued: true, width: 80 });
+        doc.text(`${orden.producto?.nombre_comercial} (Talla: ${orden.producto?.talla})`, 140, doc.y, { continued: true, width: 180 });
+        doc.text(`${orden.cantidad_fabricar} und.`, 330, doc.y, { continued: true, width: 70 });
+        doc.text(orden.estado, 410, doc.y);
+      });
+
+      doc.moveDown(2);
+      doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
+      doc.moveDown();
+      doc.fontSize(10).font('Helvetica-Oblique').text('Documento generado automáticamente por el sistema ERP.', { align: 'center' });
+
+      doc.end();
     });
   }
 }

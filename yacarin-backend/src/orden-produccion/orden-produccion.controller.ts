@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, Param, Patch, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Patch, UseGuards, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { OrdenProduccionService } from './orden-produccion.service';
 import { CreateOrdenProduccionDto } from './dto/create-orden-produccion.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -22,5 +23,17 @@ export class OrdenProduccionController {
   @Patch(':id/completar')
   completar(@Param('id') id: string) {
     return this.ordenService.completar(id);
+  }
+
+  // Descarga del PDF de producción
+  @Get('reporte/pdf')
+  async descargarReporte(@Res() res: Response) {
+    const buffer = await this.ordenService.generarReportePdf();
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': 'attachment; filename=reporte-produccion.pdf',
+      'Content-Length': buffer.length,
+    });
+    res.end(buffer);
   }
 }
