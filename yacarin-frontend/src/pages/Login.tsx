@@ -26,18 +26,18 @@ export const Login = () => {
   // Estados de retroalimentación
   const [errorText, setErrorText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [captchaVal, setCaptchaVal] = useState<string | null>(null);
   
   // Referencia y estado exclusivo para el reCAPTCHA
   const recaptchaRef = useRef<ReCAPTCHA>(null);
-  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorText('');
 
     // 1. Validamos que el usuario haya resuelto el Captcha primero
-    if (!recaptchaToken) {
-      setErrorText('Por favor, verifica que no eres un robot.');
+    if (!captchaVal) {
+      setErrorText('Por favor, completa el CAPTCHA de seguridad.');
       return;
     }
 
@@ -51,7 +51,6 @@ export const Login = () => {
       const response = await api.post('/auth/login', { 
         email, 
         password,
-        // recaptcha_token: recaptchaToken
       });
       
       // 4. Guardamos el token, rol, e id y redirigimos dinámicamente
@@ -80,7 +79,7 @@ export const Login = () => {
       
       // Si el login falla, reseteamos el Captcha por seguridad
       recaptchaRef.current?.reset();
-      setRecaptchaToken(null);
+      setCaptchaVal(null);
     } finally {
       setIsLoading(false);
     }
@@ -179,19 +178,18 @@ export const Login = () => {
             </Link>
             </div>
 
-            {/* WIDGET REAL DE GOOGLE RECAPTCHA */}
-            <div className="flex justify-center my-4 overflow-hidden">
-              <ReCAPTCHA
-                ref={recaptchaRef}
-                sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY || "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"} // Fallback a llave de prueba
-                onChange={(token) => setRecaptchaToken(token)}
-                onExpired={() => setRecaptchaToken(null)}
-              />
+            {/* CAPTCHA */}
+            <div className="flex justify-center mt-4">
+                <ReCAPTCHA
+                    ref={recaptchaRef}
+                    sitekey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"
+                    onChange={(val) => setCaptchaVal(val)}
+                />
             </div>
 
             {/* Botón de envío con variante intense-blue */}
-            <Button type="submit" className="w-full text-lg tracking-wide" variant="intense-blue" isLoading={isLoading}>
-              INGRESAR
+            <Button type="submit" variant="intense-blue" className="w-full py-4 text-lg mt-4" isLoading={isLoading}>
+              Iniciar Sesión
             </Button>
           </form>
 
