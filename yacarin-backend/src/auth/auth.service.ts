@@ -43,7 +43,7 @@ export class AuthService {
         let rol = 'CLIENTE';
         
         // Regla especial para asegurar que el admin principal siempre acceda
-        if (usuario.email === 'jose.admin@ejemplo.com') {
+        if (usuario.email === 'joelferfloreschoque@gmail.com') {
             rol = 'ADMINISTRADOR';
         } else {
             const esAdmin = await this.dataSource.getRepository(Administrador).findOne({ where: { usuario_id: usuario.id } });
