@@ -47,18 +47,14 @@ type RecetaItem = {
         cargarListas();
     }, []);
 
-    // 2. Cargar la receta cada vez que se selecciona un producto distinto
-    useEffect(() => {
-        if (!productoSeleccionado) {
-        setRecetaActual([]);
-        return;
+    const cargarReceta = async (prodId: string) => {
+        if (!prodId) {
+            setRecetaActual([]);
+            return;
         }
-
-        const cargarReceta = async () => {
         setIsLoading(true);
         try {
-            // Usamos la ruta privada exacta que pidió el backend
-            const response = await api.get(`/receta-material/producto/${productoSeleccionado}`);
+            const response = await api.get(`/receta-material/producto/${prodId}`);
             setRecetaActual(response.data);
         } catch (error) {
             console.error("Error cargando la receta:", error);
@@ -66,9 +62,11 @@ type RecetaItem = {
         } finally {
             setIsLoading(false);
         }
-        };
+    };
 
-        cargarReceta();
+    // 2. Cargar la receta cada vez que se selecciona un producto distinto
+    useEffect(() => {
+        cargarReceta(productoSeleccionado);
     }, [productoSeleccionado]);
 
     // 3. Manejador para agregar un material a la receta (POST)
@@ -77,21 +75,20 @@ type RecetaItem = {
         if (!productoSeleccionado || !materialSeleccionado || !cantidad) return;
 
         try {
-        // Aquí haríamos el POST al backend (Ajustar según la ruta exacta de tu API)
-        /*
-        await api.post('/receta-material', {
-            producto_id: productoSeleccionado,
-            material_id: materialSeleccionado,
-            cantidad_requerida: Number(cantidad)
-        });
-        // Recargar la receta...
-        */
-        
-        alert("Simulación: Material agregado a la receta exitosamente.");
-        setMaterialSeleccionado('');
-        setCantidad('');
+            await api.post('/receta-material', {
+                producto_id: productoSeleccionado,
+                material_id: materialSeleccionado,
+                cantidad_requerida: Number(cantidad)
+            });
+            
+            // Recargar la receta visualmente
+            await cargarReceta(productoSeleccionado);
+            
+            setMaterialSeleccionado('');
+            setCantidad('');
         } catch (error) {
-        console.error("Error al agregar material:", error);
+            console.error("Error al agregar material:", error);
+            alert("Error al intentar agregar el material.");
         }
     };
 
