@@ -32,36 +32,51 @@ import { TarifasModule } from './tarifas/tarifas.module';
     // 1. Cargamos las variables de entorno
     ConfigModule.forRoot({
       isGlobal: true, // Hace que las variables estén disponibles en todo el proyecto
+    }),
+    
+    // 2. Configuramos TypeORM inyectando las variables de entorno
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        const databaseUrl = configService.get<string>('DATABASE_URL');
+        return {
+          type: 'postgres',
+          ...(databaseUrl 
+            ? { 
+                url: databaseUrl,
+                ssl: { rejectUnauthorized: false } 
+              } 
+            : {
+                host: configService.get<string>('DB_HOST'),
+                port: configService.get<number>('DB_PORT'),
+                username: configService.get<string>('DB_USER'),
+                password: configService.get<string>('DB_PASSWORD'),
+                database: configService.get<string>('DB_NAME'),
+            }),
+          autoLoadEntities: true, // Carga las entidades automáticamente
+          synchronize: true, // Sincroniza el código con la BD (Solo usar en desarrollo)
+        };
+      },
+    }),
+    
+    UsuariosModule,
+    ClientesModule,
     AdministradoresModule,
-    
     EmpleadosModule,
-    
     DisenosModule,
-    
     ProductosModule,
-    
     ProveedoresModule,
-    
     MaterialesModule,
-    
     TipoCambioModule,
-    
     RecetaMaterialModule,
-    
     AuthModule,
-    
     LogAccesoModule,
-    
     PedidosModule,
-    
     OrdenProduccionModule,
-    
     DashboardModule,
-    
     MailModule,
-    
     RegistroProduccionModule,
-    
     TarifasModule,
   ],
   controllers: [AppController],
