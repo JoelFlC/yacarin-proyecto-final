@@ -1,5 +1,4 @@
 import { Controller, Get, Post, Body, Param, Patch, UseGuards, Res } from '@nestjs/common';
-import { Response } from 'express';
 import { OrdenProduccionService } from './orden-produccion.service';
 import { CreateOrdenProduccionDto } from './dto/create-orden-produccion.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -27,7 +26,7 @@ export class OrdenProduccionController {
 
   // Descarga del PDF de producción
   @Get('reporte/pdf')
-  async descargarReporte(@Res() res: Response) {
+  async descargarReporte(@Res() res: any) {
     const buffer = await this.ordenService.generarReportePdf();
     res.set({
       'Content-Type': 'application/pdf',

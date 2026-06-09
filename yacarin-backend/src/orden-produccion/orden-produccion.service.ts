@@ -138,7 +138,7 @@ export class OrdenProduccionService {
   async generarReportePdf(): Promise<Buffer> {
     const ordenes = await this.dataSource.getRepository(OrdenProduccion).find({
       relations: { producto: true },
-      order: { fecha_creacion: 'DESC' }
+      order: { fecha_inicio: 'DESC' }
     });
 
     return new Promise((resolve, reject) => {
