@@ -23,6 +23,11 @@ export class MaterialesController {
     return this.materialesService.findOne(id);
   }
 
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() updateMaterialDto: any) {
+    return this.materialesService.update(id, updateMaterialDto);
+  }
+
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.materialesService.remove(id);

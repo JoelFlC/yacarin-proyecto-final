@@ -26,6 +26,12 @@ export class MaterialesService {
     return material;
   }
 
+  async update(id: string, updateMaterialDto: any) {
+    const material = await this.findOne(id);
+    Object.assign(material, updateMaterialDto);
+    return await this.materialRepository.save(material);
+  }
+
   async remove(id: string) {
     const material = await this.findOne(id);
     material.activo = false;
