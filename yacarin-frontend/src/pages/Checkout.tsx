@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { Button } from '../components/Button';
@@ -11,12 +11,29 @@ export const Checkout = () => {
     const { carrito, obtenerTotalCarrito, vaciarCarrito, esMayorista } = useStore();
     
     // Estados del Formulario y Retroalimentación
-    const [direccionEnvio, setDireccionEnvio] = useState('');
+    const [direcciones, setDirecciones] = useState<any[]>([]);
+    const [selectedDireccionId, setSelectedDireccionId] = useState('');
+    const [metodoPago, setMetodoPago] = useState('QR');
+    
     const [isLoading, setIsLoading] = useState(false);
     const [errorText, setErrorText] = useState('');
     
     // 💡 Guardaremos el ID del pedido; si tiene valor, significa que la compra fue un ÉXITO
     const [pedidoConfirmadoId, setPedidoConfirmadoId] = useState<string | null>(null);
+
+    const cargarDirecciones = async () => {
+        try {
+            const res = await api.get('/direccion-envio');
+            setDirecciones(res.data);
+            if (res.data.length > 0) setSelectedDireccionId(res.data[0].id);
+        } catch (error) {
+            console.error("Error cargando direcciones:", error);
+        }
+    };
+
+    useEffect(() => {
+        cargarDirecciones();
+    }, []);
 
     const total = obtenerTotalCarrito();
     const monedaLabel = esMayorista ? 'USD' : 'Bs.';
@@ -24,33 +41,50 @@ export const Checkout = () => {
     const handleConfirmarPedido = async (e: React.FormEvent) => {
         e.preventDefault();
         setErrorText('');
+        if (!selectedDireccionId) {
+            setErrorText('Debes seleccionar o crear una dirección de envío.');
+            return;
+        }
+
         setIsLoading(true);
 
         const payload = {
-        direccion_envio: direccionEnvio,
-        items: carrito.map(item => ({
-            producto_id: item.producto_id,
-            cantidad: item.cantidad
-        }))
+            direccion_id: selectedDireccionId,
+            items: carrito.map(item => ({
+                producto_id: item.producto_id,
+                cantidad: item.cantidad
+            }))
         };
 
         try {
-        const response = await api.post('/pedidos', payload);
-        
-        // CAPTURAMOS EL ID DEL PEDIDO CREADO Y VACIAMOS EL CARRITO
-        setPedidoConfirmadoId(response.data.id); 
-        vaciarCarrito(); 
+            // 1. Crear el Pedido
+            const resPedido = await api.post('/pedidos', payload);
+            const pedidoId = resPedido.data.id;
+            
+            // 2. Registrar el Pago asociado
+            const payloadPago = {
+                pedido_id: pedidoId,
+                monto_pagado_usd: total,
+                metodo_pago: metodoPago,
+                tipo_pago: 'Total',
+                concepto: 'Pago realizado desde el portal web'
+            };
+            await api.post('/pago', payloadPago);
+            
+            // CAPTURAMOS EL ID DEL PEDIDO CREADO Y VACIAMOS EL CARRITO
+            setPedidoConfirmadoId(pedidoId); 
+            vaciarCarrito(); 
 
         } catch (error: any) {
-        if (error.response?.status === 400) {
-            setErrorText(error.response.data.message || 'Stock insuficiente en alguno de los ajuares elegidos.');
-        } else if (error.response?.status === 401) {
-            setErrorText('Tu sesión ha expirado o no has iniciado sesión comercial. Por favor, ingresa a tu cuenta.');
-        } else {
-            setErrorText('Hubo un problema de conexión con el servidor. Inténtalo de nuevo.');
-        }
+            if (error.response?.status === 400) {
+                setErrorText(error.response.data.message || 'Stock insuficiente o error de validación.');
+            } else if (error.response?.status === 401) {
+                setErrorText('Tu sesión ha expirado o no has iniciado sesión comercial. Por favor, ingresa a tu cuenta.');
+            } else {
+                setErrorText('Hubo un problema de conexión con el servidor. Inténtalo de nuevo.');
+            }
         } finally {
-        setIsLoading(false);
+            setIsLoading(false);
         }
     };
 
@@ -132,17 +166,54 @@ export const Checkout = () => {
                 <form onSubmit={handleConfirmarPedido} className="space-y-6">
                 <div>
                     <label className="block text-sm font-medium text-[var(--color-yacar-texto)] mb-2">
-                    Dirección de Entrega Estricta (La Paz / El Alto)
+                        Selecciona una Dirección de Entrega
                     </label>
-                    <textarea
-                    rows={3}
-                    value={direccionEnvio}
-                    onChange={(e) => setDireccionEnvio(e.target.value)}
-                    placeholder="Ej: Av. Principal #123, Zona 16 de Julio, El Alto"
-                    className="w-full px-4 py-3 rounded-lg bg-[var(--color-yacar-surface)]/40 border border-gray-200 focus:bg-white focus:border-[var(--color-yacar-azul)] focus:ring-2 focus:ring-[var(--color-yacar-azul)]/10 outline-none transition-all text-sm resize-none"
-                    required
-                    />
-                    <p className="text-xs text-gray-400 mt-1">Por favor detalla calles, número de casa o referencias para nuestro equipo logístico.</p>
+                    
+                    {direcciones.length === 0 ? (
+                        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <p className="text-sm text-yellow-800 mb-2">No tienes direcciones registradas.</p>
+                            <Link to="/perfil" className="text-sm font-bold text-[var(--color-yacar-azul-vivo)] hover:underline">
+                                Ir a mi Perfil para agregar una dirección
+                            </Link>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                            {direcciones.map(dir => (
+                                <label key={dir.id} className={`cursor-pointer border rounded-lg p-4 transition-all ${selectedDireccionId === dir.id ? 'border-[var(--color-yacar-azul)] bg-[var(--color-yacar-azul)]/5 shadow-sm' : 'border-gray-200 hover:border-gray-300'}`}>
+                                    <div className="flex items-start gap-3">
+                                        <input 
+                                            type="radio" 
+                                            name="direccion" 
+                                            value={dir.id} 
+                                            checked={selectedDireccionId === dir.id} 
+                                            onChange={() => setSelectedDireccionId(dir.id)} 
+                                            className="mt-1"
+                                        />
+                                        <div>
+                                            <p className="font-bold text-[var(--color-yacar-texto)] text-sm">{dir.departamento}</p>
+                                            <p className="text-xs text-gray-600 mt-1">{dir.zona}</p>
+                                            <p className="text-xs text-gray-500">{dir.calle_numero}</p>
+                                        </div>
+                                    </div>
+                                </label>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-[var(--color-yacar-texto)] mb-2">
+                        Método de Pago
+                    </label>
+                    <select 
+                        value={metodoPago} 
+                        onChange={(e) => setMetodoPago(e.target.value)} 
+                        className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-[var(--color-yacar-azul)] outline-none"
+                    >
+                        <option value="QR">Pago con Código QR</option>
+                        <option value="Transferencia">Transferencia Bancaria</option>
+                        <option value="Efectivo">Efectivo (Contra entrega)</option>
+                    </select>
                 </div>
 
                 <Button 

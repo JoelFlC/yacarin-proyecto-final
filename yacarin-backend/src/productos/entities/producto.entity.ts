@@ -26,7 +26,7 @@ export class Producto {
     @Column('int', { default: 0 })
     stock_actual!: number;
 
-    @Column()
+    @Column({ nullable: true })
     imagen_url!: string;
 
     @Column({ default: true })

@@ -1,6 +1,8 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { Usuario } from '../../usuarios/entities/usuario.entity';
 import { DetallePedido } from './detalle-pedido.entity';
+import { DireccionEnvio } from '../../direccion-envio/entities/direccion-envio.entity';
+import { TipoCambio } from '../../tipo-cambio/entities/tipo-cambio.entity';
 
 @Entity('PEDIDO')
 export class Pedido {
@@ -17,8 +19,16 @@ export class Pedido {
     @Column({ default: 'PENDIENTE' }) 
     estado!: string;
 
-    @Column({ type: 'text', nullable: true })
-    direccion_envio!: string; // Útil para envíos interdepartamentales
+    @ManyToOne(() => DireccionEnvio, { nullable: true })
+    @JoinColumn({ name: 'direccion_id' })
+    direccion!: DireccionEnvio;
+
+    @ManyToOne(() => TipoCambio)
+    @JoinColumn({ name: 'tipo_cambio_id' })
+    tipo_cambio!: TipoCambio;
+
+    @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+    costo_envio!: number;
 
     @CreateDateColumn()
     fecha_pedido!: Date;

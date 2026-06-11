@@ -12,6 +12,8 @@ import { Productos } from './pages/admin/Productos';
 import { Disenos } from './pages/admin/Disenos';
 import { Dashboard } from './pages/admin/Dashboard';
 import { Clientes } from './pages/admin/Clientes';
+import { Proveedores } from './pages/admin/Proveedores';
+import { Pedidos } from './pages/admin/Pedidos';
 
 
 import { Login } from './pages/Login';
@@ -59,6 +61,7 @@ function App() {
         <Route path="/admin" element={<PrivateLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="bodega" element={<Bodega />} />
+          <Route path="proveedores" element={<Proveedores />} />
           <Route path="produccion" element={<Produccion />} />
           <Route path="seguimiento" element={<OrdenesProduccion />} />
           <Route path="tarifas" element={<Tarifas />} />
@@ -67,6 +70,7 @@ function App() {
           <Route path="productos" element={<Productos />} />
           <Route path="disenos" element={<Disenos />} />
           <Route path="clientes" element={<Clientes />} />
+          <Route path="pedidos" element={<Pedidos />} />
         </Route>
 
         {/* 4. CONTROL DE ERRORES (Ruta comodín)*/}

@@ -13,8 +13,16 @@ export const EmpleadoDashboard = () => {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        if (!usuarioId || rol !== 'EMPLEADO') {
+        if (!usuarioId) {
             navigate('/login');
+            return;
+        }
+        if (rol === 'ADMINISTRADOR') {
+            navigate('/admin');
+            return;
+        }
+        if (rol !== 'EMPLEADO') {
+            navigate('/');
             return;
         }
 
@@ -103,18 +111,18 @@ export const EmpleadoDashboard = () => {
                                             {new Date(reg.fecha_registro || Date.now()).toLocaleDateString()}
                                         </td>
                                         <td className="px-4 py-3 text-xs font-mono text-gray-400">
-                                            {reg.orden_id ? reg.orden_id.substring(0,8) : 'N/A'}
+                                            {reg.orden?.id ? reg.orden.id.substring(0,8) : 'N/A'}
                                         </td>
                                         <td className="px-4 py-3">
                                             <span className="text-[10px] font-bold bg-[var(--color-yacar-azul)]/10 text-[var(--color-yacar-azul-vivo)] px-2 py-1 rounded">
-                                            {reg.tarea_realizada || reg.tarea}
+                                            {reg.tarea_realizada}
                                             </span>
                                         </td>
                                         <td className="px-4 py-3 text-sm font-medium text-center">
-                                            {reg.cantidad_producida || reg.cantidad}
+                                            {reg.cantidad_producida}
                                         </td>
                                         <td className="px-4 py-3 text-sm font-bold text-[var(--color-yacar-texto)] text-right">
-                                            Bs. {Number(reg.pago_generado_bs).toFixed(2)}
+                                            Bs. {Number(reg.total_a_pagar || 0).toFixed(2)}
                                         </td>
                                         </tr>
                                     ))}
@@ -129,7 +137,7 @@ export const EmpleadoDashboard = () => {
                         <div className="mt-6 pt-4 border-t border-[var(--color-yacar-surface)] flex justify-between items-center bg-gray-50 p-6 rounded-xl border">
                             <span className="text-sm font-bold text-gray-600 uppercase">Total Devengado a la Fecha:</span>
                             <span className="text-2xl font-bold text-[var(--color-yacar-verde)]">
-                            Bs. {historial.reduce((sum, reg) => sum + Number(reg.pago_generado_bs), 0).toFixed(2)}
+                            Bs. {historial.reduce((sum, reg) => sum + Number(reg.total_a_pagar || 0), 0).toFixed(2)}
                             </span>
                         </div>
                         )}

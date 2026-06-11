@@ -1,13 +1,14 @@
-import { Controller, Get, Post, Body, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, UseGuards, Patch } from '@nestjs/common';
 import { ProveedoresService } from './proveedores.service';
 import { CreateProveedorDto } from './dto/create-proveedore.dto';
+import { UpdateProveedorDto } from './dto/update-proveedore.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
-@UseGuards(JwtAuthGuard) 
+@UseGuards(JwtAuthGuard)
 
 @Controller('proveedores')
 export class ProveedoresController {
-  constructor(private readonly proveedoresService: ProveedoresService) {}
+  constructor(private readonly proveedoresService: ProveedoresService) { }
 
   @Post()
   create(@Body() createProveedorDto: CreateProveedorDto) {
@@ -22,6 +23,11 @@ export class ProveedoresController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.proveedoresService.findOne(id);
+  }
+
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() updateProveedorDto: UpdateProveedorDto) {
+    return this.proveedoresService.update(id, updateProveedorDto);
   }
 
   @Delete(':id')

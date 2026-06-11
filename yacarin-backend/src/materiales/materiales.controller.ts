@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, UseGuards, Patch } from '@nestjs/common';
 import { MaterialesService } from './materiales.service';
 import { CreateMaterialDto } from './dto/create-materiale.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';

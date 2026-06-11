@@ -23,10 +23,15 @@ export class PedidosService {
       let totalUsd = 0;
       const detallesToSave: DetallePedido[] = [];
 
+      // 0. Obtener tipo de cambio actual
+      const tipoCambio = await queryRunner.manager.findOne(TipoCambio, { where: { moneda: 'USD' } });
+      if (!tipoCambio) throw new BadRequestException('Tipo de cambio no configurado.');
+
       // 1. Crear la cabecera del pedido temporalmente
       const pedido = queryRunner.manager.create(Pedido, {
         cliente: { id: clienteId },
-        direccion_envio: createPedidoDto.direccion_envio,
+        direccion: { id: createPedidoDto.direccion_id },
+        tipo_cambio: { id: tipoCambio.id },
         estado: 'PENDIENTE',
         total_usd: 0, // Lo calcularemos iterando los ítems
       });
@@ -85,6 +90,19 @@ export class PedidosService {
     }
   }
 
+  async findAll() {
+    return await this.dataSource.getRepository(Pedido).find({
+      relations: {
+        cliente: true,
+        direccion: true,
+        tipo_cambio: true,
+        detalles: {
+          producto: true
+        }
+      },
+      order: { fecha_pedido: 'DESC' }
+    });
+  }
 
   // Importa esto en la parte superior del archivo:
   // import * as PDFDocument from 'pdfkit';
@@ -96,6 +114,8 @@ export class PedidosService {
       where: { id: pedidoId },
       relations: {
         cliente: true,
+        direccion: true,
+        tipo_cambio: true,
         detalles: {
           producto: true
         }
@@ -106,17 +126,7 @@ export class PedidosService {
       throw new NotFoundException('Pedido no encontrado para generar comprobante.');
     }
 
-    // CONVERSIÓN EN TIEMPO REAL: Buscamos el valor del dólar usando el dataSource directo
-    // Esto evita tocar el constructor o alterar las dependencias del módulo
-    let tasaDolar = 6.96;
-    try {
-      const tasaRecord = await this.dataSource.getRepository(TipoCambio).findOneBy({ moneda: 'USD' });
-      if (tasaRecord) {
-        tasaDolar = Number(tasaRecord.valor_bs);
-      }
-    } catch (error) {
-      console.warn('Alerta: No se pudo obtener la tasa en vivo, usando 6.96 por defecto');
-    }
+    let tasaDolar = pedido.tipo_cambio ? Number(pedido.tipo_cambio.valor_bs) : 6.96;
 
     return new Promise((resolve, reject) => {
       const doc = new PDFDocument({ margin: 50 });
@@ -139,7 +149,7 @@ export class PedidosService {
       doc.font('Helvetica').fontSize(10);
       doc.text(`Nombre: ${pedido.cliente.nombre} ${pedido.cliente.apPat} ${pedido.cliente.apMat}`);    
       doc.text(`Email: ${pedido.cliente.email}`);
-      doc.text(`Dirección de envío: ${pedido.direccion_envio || 'Recojo en tienda'}`);
+      doc.text(`Dirección de envío: ${pedido.direccion ? `${pedido.direccion.departamento}, ${pedido.direccion.zona}, ${pedido.direccion.calle_numero}` : 'Recojo en tienda'}`);
       doc.moveDown();
 
       // Tabla de Detalles (Cabecera adaptada para mostrar ambas conversiones)

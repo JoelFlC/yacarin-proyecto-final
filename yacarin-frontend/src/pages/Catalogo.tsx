@@ -56,16 +56,6 @@ export const Catalogo = () => {
             </p>
             </div>
 
-            {/* Botones que modifican el estado GLOBAL */}
-            <div className="mt-4 md:mt-0 flex items-center gap-3 bg-[var(--color-yacar-surface)] p-2 rounded-lg">
-            <span className="text-sm font-medium text-[var(--color-yacar-texto)]">Vista:</span>
-            <button onClick={() => setEsMayorista(false)} className={`px-3 py-1 text-sm rounded-md transition-colors ${!esMayorista ? 'bg-white shadow text-[var(--color-yacar-azul-vivo)]' : 'text-gray-500 hover:bg-white/50'}`}>
-                Minorista (B2C)
-            </button>
-            <button onClick={() => setEsMayorista(true)} className={`px-3 py-1 text-sm rounded-md transition-colors ${esMayorista ? 'bg-[var(--color-yacar-dorado)] shadow text-white' : 'text-gray-500 hover:bg-white/50'}`}>
-                Mayorista (B2B)
-            </button>
-            </div>
         </div>
 
         {isLoading ? (

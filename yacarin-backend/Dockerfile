@@ -1,22 +1,20 @@
-FROM node:18-alpine
-
-# Directorio de trabajo en el contenedor
+FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Copiar dependencias
 COPY package*.json ./
-
-# Instalar dependencias
 RUN npm install
 
-# Copiar el resto del código
 COPY . .
 
-# Construir la aplicación NestJS
 RUN npm run build
 
-# Exponer el puerto del backend
+FROM node:20-alpine
+WORKDIR /app
+
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist
+COPY package*.json ./
+
 EXPOSE 3000
 
-# Comando para iniciar la aplicación en producción
 CMD ["npm", "run", "start:prod"]

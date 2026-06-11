@@ -63,4 +63,31 @@ export class MailService {
         throw new InternalServerErrorException('No se pudo enviar el correo de recuperación');
         }
     }
+
+    async enviarReciboPago(email: string, pdfBuffer: Buffer, pedidoId: string) {
+        try {
+            await this.transporter.sendMail({
+                from: process.env.MAIL_FROM,
+                to: email,
+                subject: `Recibo de Pago Confirmado - Pedido #${pedidoId.split('-')[0].toUpperCase()}`,
+                html: `
+                <div style="font-family: 'Helvetica', sans-serif; color: #2C3E50; padding: 20px;">
+                    <h2 style="color: #5FA8D3;">¡Tu pago ha sido confirmado!</h2>
+                    <p>Adjunto a este correo encontrarás el comprobante de tu compra.</p>
+                    <p>Nos pondremos a trabajar inmediatamente en tu pedido.</p>
+                    <br/>
+                    <p><strong>Cariño que abraza,</strong><br/>El equipo de Yacarín.</p>
+                </div>
+                `,
+                attachments: [
+                    {
+                        filename: `recibo_${pedidoId.split('-')[0]}.pdf`,
+                        content: pdfBuffer,
+                    }
+                ]
+            });
+        } catch (error) {
+            console.error('Error al enviar recibo:', error);
+        }
+    }
 }

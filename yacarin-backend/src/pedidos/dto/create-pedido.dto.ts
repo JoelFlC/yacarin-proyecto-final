@@ -16,8 +16,9 @@ class ItemPedidoDto {
     // DTO principal
     export class CreatePedidoDto {
     @IsString()
-    @IsNotEmpty({ message: 'La dirección de envío es obligatoria' })
-    direccion_envio!: string;
+    @IsUUID('4', { message: 'El ID de la dirección es inválido' })
+    @IsNotEmpty({ message: 'El ID de la dirección es obligatorio' })
+    direccion_id!: string;
 
     @IsArray()
     @ValidateNested({ each: true }) 

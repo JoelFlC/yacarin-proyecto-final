@@ -30,6 +30,11 @@ export const Dashboard = () => {
         ventasMes: 24
     });
 
+    // Estado para el Tipo de Cambio
+    const [tipoCambio, setTipoCambio] = useState<any>(null);
+    const [editandoTC, setEditandoTC] = useState(false);
+    const [nuevoTC, setNuevoTC] = useState('');
+
     useEffect(() => {
         const fetchDashboardData = async () => {
             try {
@@ -82,10 +87,29 @@ export const Dashboard = () => {
             } catch (error) {
                 console.error("Error al cargar analíticas:", error);
             }
+
+            try {
+                const tcRes = await api.get('/tipo-cambio/USD');
+                setTipoCambio(tcRes.data);
+                setNuevoTC(tcRes.data.valor_bs.toString());
+            } catch (error) {
+                console.error("No se encontró el tipo de cambio USD");
+            }
         };
 
         fetchDashboardData();
     }, []);
+
+    const handleActualizarTC = async () => {
+        try {
+            const res = await api.post('/tipo-cambio', { moneda: 'USD', valor_bs: Number(nuevoTC) });
+            setTipoCambio(res.data);
+            setEditandoTC(false);
+        } catch (error) {
+            console.error("Error al actualizar tipo de cambio");
+            alert("No se pudo actualizar el tipo de cambio");
+        }
+    };
 
     const chartOptions = {
         responsive: true,
@@ -193,6 +217,51 @@ export const Dashboard = () => {
                 <span className="font-bold text-sm text-gray-700">Aprobar Mayoristas</span>
                 </Link>
             </div>
+            </div>
+
+            {/* Gestión del Tipo de Cambio */}
+            <div className="bg-white p-6 rounded-2xl border border-[var(--color-yacar-surface)] shadow-sm mt-6">
+                <h3 className="text-lg font-bold text-[var(--color-yacar-texto)] mb-4 border-b pb-2">Mercado Cambiario</h3>
+                <div className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-100">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-bold">
+                            $
+                        </div>
+                        <div>
+                            <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Cotización USD</p>
+                            {editandoTC ? (
+                                <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-sm font-bold">Bs.</span>
+                                    <input 
+                                        type="number" 
+                                        step="0.01" 
+                                        className="w-20 px-2 py-1 text-sm border border-[var(--color-yacar-azul)] rounded outline-none"
+                                        value={nuevoTC}
+                                        onChange={(e) => setNuevoTC(e.target.value)}
+                                        autoFocus
+                                    />
+                                </div>
+                            ) : (
+                                <p className="text-lg font-bold text-[var(--color-yacar-texto)]">
+                                    Bs. {tipoCambio ? Number(tipoCambio.valor_bs).toFixed(2) : '6.96'}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                    <div>
+                        {editandoTC ? (
+                            <div className="flex flex-col gap-1">
+                                <button onClick={handleActualizarTC} className="text-xs font-bold bg-[var(--color-yacar-azul)] text-white px-3 py-1 rounded">Guardar</button>
+                                <button onClick={() => setEditandoTC(false)} className="text-[10px] text-gray-400 hover:text-gray-600">Cancelar</button>
+                            </div>
+                        ) : (
+                            <button onClick={() => setEditandoTC(true)} className="text-sm font-bold text-[var(--color-yacar-azul-vivo)] hover:underline">
+                                Ajustar
+                            </button>
+                        )}
+                    </div>
+                </div>
+                <p className="text-xs text-gray-400 mt-3">Este valor se utiliza para la conversión en el catálogo y carrito de compras público.</p>
             </div>
         </div>
         </div>

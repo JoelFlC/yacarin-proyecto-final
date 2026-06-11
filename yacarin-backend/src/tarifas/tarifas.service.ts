@@ -2,6 +2,7 @@ import { Injectable, OnModuleInit, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { TarifaProduccion } from './entities/tarifa.entity';
+import { ILike } from 'typeorm';
 
 @Injectable()
 export class TarifasService implements OnModuleInit {
@@ -29,7 +30,7 @@ export class TarifasService implements OnModuleInit {
   }
 
   async actualizarTarifa(tarea: string, nuevoPrecio: number) {
-    const tarifa = await this.tarifaRepo.findOne({ where: { tarea: tarea.toUpperCase() } });
+    const tarifa = await this.tarifaRepo.findOne({ where: { tarea: ILike(tarea) } });
     if (!tarifa) throw new NotFoundException(`La tarea ${tarea} no existe.`);
 
     tarifa.precio_bs = nuevoPrecio;

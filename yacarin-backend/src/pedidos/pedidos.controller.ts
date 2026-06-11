@@ -16,6 +16,10 @@ export class PedidosController {
     return this.pedidosService.create(clienteId, createPedidoDto);
   }
 
+  @Get()
+  findAll() {
+    return this.pedidosService.findAll();
+  }
 
   @Get(':id/comprobante')
   async descargarComprobante(@Param('id') id: string, @Res() res: Response) {

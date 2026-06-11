@@ -57,4 +57,8 @@ export class RecetaMaterialService {
       relations: { material: true }
     });
   }
+
+  async removeByProducto(producto_id: string) {
+    await this.recetaRepo.delete({ producto_id });
+  }
 }

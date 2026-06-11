@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { Button } from '../../components/Button';
+import { Tarifas } from './Tarifas';
 
 export const RegistroProduccion = () => {
     // Datos maestros para los selectores
@@ -25,6 +26,9 @@ export const RegistroProduccion = () => {
     // Notificaciones y Boleta de Éxito
     const [notificacion, setNotificacion] = useState({ visible: false, mensaje: '', tipo: 'success' });
     const [boletaGenerada, setBoletaGenerada] = useState<any | null>(null);
+
+    // Estado del Modal de Tarifas
+    const [isTarifasModalOpen, setIsTarifasModalOpen] = useState(false);
 
     const mostrarNotificacion = (mensaje: string, tipo: 'success' | 'error' = 'success') => {
         setNotificacion({ visible: true, mensaje, tipo });
@@ -131,10 +135,32 @@ export const RegistroProduccion = () => {
             </div>
         )}
 
-        <div className="mb-8">
-            <h1 className="text-3xl font-bold text-[var(--color-yacar-texto)] font-[var(--font-titulos)]">Nómina a Destajo</h1>
-            <p className="text-gray-500 text-sm mt-1">Registra la producción de los operarios para generar su liquidación automática.</p>
+        <div className="flex justify-between items-center mb-8">
+            <div>
+                <h1 className="text-3xl font-bold text-[var(--color-yacar-texto)] font-[var(--font-titulos)]">Nómina a Destajo</h1>
+                <p className="text-gray-500 text-sm mt-1">Registra la producción de los operarios para generar su liquidación automática.</p>
+            </div>
+            <Button onClick={() => setIsTarifasModalOpen(true)} variant="secondary" className="border-[var(--color-yacar-azul)] text-[var(--color-yacar-azul-vivo)] font-bold">
+                ⚙️ Configurar Tarifas
+            </Button>
         </div>
+
+        {/* MODAL DE TARIFAS */}
+        {isTarifasModalOpen && (
+            <div className="fixed inset-0 bg-[var(--color-yacar-texto)]/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-[var(--radius-suave)] w-full max-w-4xl overflow-hidden shadow-2xl relative">
+                    <button 
+                        onClick={() => setIsTarifasModalOpen(false)} 
+                        className="absolute top-4 right-4 text-gray-400 hover:text-[var(--color-yacar-rosa)] transition-colors z-10"
+                    >
+                        ✕
+                    </button>
+                    <div className="p-8 max-h-[85vh] overflow-y-auto">
+                        <Tarifas />
+                    </div>
+                </div>
+            </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
@@ -263,18 +289,18 @@ export const RegistroProduccion = () => {
                                 {new Date(reg.fecha_registro || Date.now()).toLocaleDateString()}
                             </td>
                             <td className="px-4 py-3 text-xs font-mono text-gray-400">
-                                {reg.orden_id ? reg.orden_id.substring(0,8) : 'N/A'}
+                                {reg.orden?.id ? reg.orden.id.substring(0,8) : 'N/A'}
                             </td>
                             <td className="px-4 py-3">
                                 <span className="text-[10px] font-bold bg-[var(--color-yacar-azul)]/10 text-[var(--color-yacar-azul-vivo)] px-2 py-1 rounded">
-                                {reg.tarea_realizada || reg.tarea}
+                                {reg.tarea_realizada}
                                 </span>
                             </td>
                             <td className="px-4 py-3 text-sm font-medium text-center">
-                                {reg.cantidad_producida || reg.cantidad}
+                                {reg.cantidad_producida}
                             </td>
                             <td className="px-4 py-3 text-sm font-bold text-[var(--color-yacar-texto)] text-right">
-                                Bs. {Number(reg.pago_generado_bs).toFixed(2)}
+                                Bs. {Number(reg.total_a_pagar || 0).toFixed(2)}
                             </td>
                             </tr>
                         ))}
@@ -289,7 +315,7 @@ export const RegistroProduccion = () => {
                 <div className="mt-4 pt-4 border-t border-[var(--color-yacar-surface)] flex justify-between items-center bg-gray-50 p-4 rounded-lg">
                     <span className="text-sm font-bold text-gray-600 uppercase">Total Devengado (Histórico):</span>
                     <span className="text-xl font-bold text-[var(--color-yacar-verde)]">
-                    Bs. {historial.reduce((sum, reg) => sum + Number(reg.pago_generado_bs), 0).toFixed(2)}
+                    Bs. {historial.reduce((sum, reg) => sum + Number(reg.total_a_pagar || 0), 0).toFixed(2)}
                     </span>
                 </div>
                 )}

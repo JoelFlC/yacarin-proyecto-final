@@ -82,7 +82,6 @@ type OrdenProduccionType = {
         }
     };
 
-    // 💡 NUEVO: Función PATCH para completar la orden
     const handleCompletarOrden = async (id: string) => {
         try {
         // Consumimos el endpoint PATCH tal como dicta el contrato
@@ -94,6 +93,25 @@ type OrdenProduccionType = {
         } catch (error: any) {
         console.error("Error al completar la orden:", error);
         mostrarNotificacion(error.response?.data?.message || "Hubo un error al intentar completar la orden.", 'error');
+        }
+    };
+
+    const handleDownloadPDF = async () => {
+        try {
+            mostrarNotificacion("Generando reporte PDF...", "success");
+            const response = await api.get(`/orden-produccion/reporte/pdf`, {
+                responseType: 'blob'
+            });
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `Reporte_Produccion.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode?.removeChild(link);
+        } catch (error) {
+            console.error("Error al descargar PDF:", error);
+            mostrarNotificacion("Error al generar el reporte PDF.", "error");
         }
     };
 
@@ -194,8 +212,8 @@ type OrdenProduccionType = {
             <div className="flex gap-2">
                 <Button 
                 variant="secondary" 
-                className="flex items-center gap-2 shadow-sm text-gray-700 bg-white border border-gray-200"
-                onClick={() => window.open(`${api.defaults.baseURL}/orden-produccion/reporte/pdf`, '_blank')}
+                className="flex items-center gap-2 shadow-sm bg-[var(--color-yacar-texto)] text-white hover:bg-[var(--color-yacar-texto)]/90 border-transparent"
+                onClick={handleDownloadPDF}
                 >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                 Exportar a PDF

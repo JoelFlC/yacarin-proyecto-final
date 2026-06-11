@@ -1,56 +1,66 @@
-version: '3.8'
-
 services:
+  # 1. Base de Datos (PostgreSQL)
   db:
     image: postgres:15-alpine
     container_name: yacarin_db
-    restart: always
     environment:
       POSTGRES_USER: root
       POSTGRES_PASSWORD: rootpassword
       POSTGRES_DB: yacarin_db
     ports:
-      - "5433:5432" # Expuesto en el host en el 5433 según el .env original
+      - "5433:5432" # Expuesto en tu máquina local en el 5433
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:
       - yacarin-network
+    restart: always
 
+  # 2. Backend (NestJS)
   backend:
     build:
       context: ./yacarin-backend
     container_name: yacarin_backend
-    restart: always
-    ports:
-      - "3000:3000"
     environment:
-      # Conexión adaptada al contenedor DB
       - DB_HOST=db
       - DB_PORT=5432
       - DB_USER=root
       - DB_PASSWORD=rootpassword
       - DB_NAME=yacarin_db
       - JWT_SECRET=yacarin_super_secreto_academico_2026
+    ports:
+      - "3000:3000"
     depends_on:
       - db
+    volumes:
+      # Sincroniza tu código local con el contenedor (asumiendo que tu WORKDIR es /app en el Dockerfile)
+      - ./yacarin-backend:/app          
+      - /app/node_modules
     networks:
       - yacarin-network
+    restart: always
 
+  # 3. Frontend (React)
   frontend:
     build:
       context: ./yacarin-frontend
     container_name: yacarin_frontend
-    restart: always
     ports:
-      - "5173:80" # Expone el frontend en localhost:5173
+      - "5173:80" # Expone el contenedor (puerto 80 interno) al 5173 de tu máquina local
     depends_on:
       - backend
+    volumes:
+      # Sincroniza tu código local con el contenedor
+      - ./yacarin-frontend:/app         
+      - /app/node_modules
     networks:
       - yacarin-network
+    restart: always
 
+# Declaración del volumen persistente
 volumes:
   pgdata:
 
+# Declaración de la red interna
 networks:
   yacarin-network:
     driver: bridge

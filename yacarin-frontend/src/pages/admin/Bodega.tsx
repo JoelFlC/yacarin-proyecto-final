@@ -20,6 +20,12 @@ type MaterialType = {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [materialAEditar, setMaterialAEditar] = useState<MaterialType | null>(null);
     
+    // Estados para la Compra de Materiales
+    const [proveedores, setProveedores] = useState<any[]>([]);
+    const [isModalCompraOpen, setIsModalCompraOpen] = useState(false);
+    const [materialAComprar, setMaterialAComprar] = useState<MaterialType | null>(null);
+    const [compraData, setCompraData] = useState({ proveedor_id: '', cantidad: '', precio_compra_usd: '' });
+
     const [notificacion, setNotificacion] = useState({ visible: false, mensaje: '', tipo: 'success' });
 
     // 💡 2. FORMULARIO LIMPIO, SOLO CON LOS CAMPOS PERMITIDOS
@@ -38,8 +44,13 @@ type MaterialType = {
     const cargarMateriales = async () => {
         try {
         setIsLoading(true);
-        const res = await api.get('/materiales'); 
-        setMateriales(res.data);
+        const [resMat, resProv] = await Promise.all([
+            api.get('/materiales'),
+            api.get('/proveedores')
+        ]); 
+        setMateriales(resMat.data);
+        // Filtrar solo proveedores activos
+        setProveedores(resProv.data.filter((p: any) => p.activo));
         } catch (error) {
         console.error("Error cargando bodega:", error);
         mostrarNotificacion("Error al intentar obtener el inventario.", 'error');
@@ -55,6 +66,11 @@ type MaterialType = {
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleCompraChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        setCompraData(prev => ({ ...prev, [name]: value }));
     };
 
     const abrirModalCreacion = () => {
@@ -73,6 +89,12 @@ type MaterialType = {
         stock_actual: mat.stock_actual ? mat.stock_actual.toString() : '0'
         });
         setIsModalOpen(true);
+    };
+
+    const abrirModalCompra = (mat: MaterialType) => {
+        setMaterialAComprar(mat);
+        setCompraData({ proveedor_id: '', cantidad: '', precio_compra_usd: '' });
+        setIsModalCompraOpen(true);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -106,6 +128,31 @@ type MaterialType = {
         mostrarNotificacion(errorReal || "Error al procesar el material.", 'error');
         } finally {
         setIsSubmitting(false);
+        }
+    };
+
+    const handleCompraSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+
+        const payload = {
+            proveedor_id: compraData.proveedor_id,
+            material_id: materialAComprar?.id,
+            cantidad: Number(compraData.cantidad),
+            precio_compra_usd: Number(compraData.precio_compra_usd)
+        };
+
+        try {
+            await api.post('/compra-material', payload);
+            mostrarNotificacion("Ingreso de material registrado correctamente.");
+            setIsModalCompraOpen(false);
+            cargarMateriales();
+        } catch (error: any) {
+            const msjBackend = error.response?.data?.message;
+            const errorReal = Array.isArray(msjBackend) ? msjBackend[0] : msjBackend;
+            mostrarNotificacion(errorReal || "Error al registrar la compra.", 'error');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -161,12 +208,12 @@ type MaterialType = {
 
                     <div>
                     <label className="block text-xs font-bold text-gray-700 mb-1">Costo Base ($ USD)</label>
-                    <input type="number" step="0.01" min="0" name="costo_base_usd" value={formData.costo_base_usd} onChange={handleInputChange} required placeholder="0.00" className="w-full px-3 py-2 rounded border border-gray-200 outline-none text-sm focus:border-[var(--color-yacar-azul)]" />
+                    <input type="number" step="0.01" min="0" name="costo_base_usd" value={formData.costo_base_usd} onChange={handleInputChange} required placeholder="0.00" className={`w-full px-3 py-2 rounded border border-gray-200 outline-none text-sm focus:border-[var(--color-yacar-azul)] ${materialAEditar ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`} disabled={!!materialAEditar} title={materialAEditar ? "El costo base se actualiza automáticamente al registrar compras" : ""} />
                     </div>
 
                     <div className="col-span-2">
                     <label className="block text-xs font-bold text-gray-700 mb-1">Stock Físico Actual</label>
-                    <input type="number" step="0.01" min="0" name="stock_actual" value={formData.stock_actual} onChange={handleInputChange} required placeholder="Cantidad" className="w-full px-3 py-2 rounded border border-gray-200 outline-none text-sm focus:border-[var(--color-yacar-azul)]" />
+                    <input type="number" step="0.01" min="0" name="stock_actual" value={formData.stock_actual} onChange={handleInputChange} required placeholder="Cantidad" className={`w-full px-3 py-2 rounded border border-gray-200 outline-none text-sm focus:border-[var(--color-yacar-azul)] ${materialAEditar ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`} disabled={!!materialAEditar} title={materialAEditar ? "El stock se infla matemáticamente al registrar compras" : ""} />
                     </div>
                 </div>
 
@@ -178,6 +225,54 @@ type MaterialType = {
                 </div>
                 </form>
             </div>
+            </div>
+        )}
+
+        {isModalCompraOpen && materialAComprar && (
+            <div className="fixed inset-0 bg-[var(--color-yacar-texto)]/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-[var(--radius-suave)] shadow-2xl w-full max-w-md overflow-hidden max-h-[90vh] overflow-y-auto">
+                    <div className="p-6 border-b border-[var(--color-yacar-surface)] flex justify-between items-center bg-[var(--color-yacar-crema)]/30">
+                        <h2 className="text-xl font-bold text-[var(--color-yacar-texto)] font-[var(--font-titulos)]">
+                            Comprar Material
+                        </h2>
+                        <button onClick={() => setIsModalCompraOpen(false)} className="text-gray-400 hover:text-[var(--color-yacar-rosa)] transition-colors">✕</button>
+                    </div>
+                    
+                    <form onSubmit={handleCompraSubmit} className="p-6 space-y-4">
+                        <div className="bg-[var(--color-yacar-azul)]/5 p-3 rounded text-sm text-[var(--color-yacar-texto)] font-medium mb-2 border border-[var(--color-yacar-azul)]/20">
+                            <strong>Material a ingresar:</strong> {materialAComprar.nombre}
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-bold text-gray-700 mb-1">Proveedor</label>
+                            <select name="proveedor_id" value={compraData.proveedor_id} onChange={handleCompraChange} required className="w-full px-3 py-2 rounded border border-gray-200 outline-none text-sm focus:border-[var(--color-yacar-azul)] bg-white">
+                                <option value="" disabled>Seleccione un proveedor...</option>
+                                {proveedores.map(prov => (
+                                    <option key={prov.id} value={prov.id}>{prov.nombre_empresa}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-bold text-gray-700 mb-1">Cantidad a ingresar ({materialAComprar.unidad_medida})</label>
+                            <input type="number" step="0.01" min="0.01" name="cantidad" value={compraData.cantidad} onChange={handleCompraChange} required placeholder="Ej: 50" className="w-full px-3 py-2 rounded border border-gray-200 outline-none text-sm focus:border-[var(--color-yacar-azul)]" />
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-bold text-gray-700 mb-1">Precio Compra Total ($ USD)</label>
+                            <input type="number" step="0.01" min="0" name="precio_compra_usd" value={compraData.precio_compra_usd} onChange={handleCompraChange} required placeholder="Ej: 100.50" className="w-full px-3 py-2 rounded border border-gray-200 outline-none text-sm focus:border-[var(--color-yacar-azul)]" />
+                            <p className="text-[10px] text-gray-400 mt-1">Se convertirá históricamente a Bs. usando el tipo de cambio oficial de hoy.</p>
+                        </div>
+
+                        <div className="pt-6 flex gap-3">
+                            <Button type="button" variant="secondary" onClick={() => setIsModalCompraOpen(false)} className="flex-1">Cancelar</Button>
+                            <Button type="submit" variant="intense-blue" className="flex-1 flex items-center justify-center gap-2" isLoading={isSubmitting}>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                                Registrar Ingreso
+                            </Button>
+                        </div>
+                    </form>
+                </div>
             </div>
         )}
 
@@ -242,7 +337,11 @@ type MaterialType = {
                         <div className="flex justify-end gap-2 items-center">
                         {mat.activo && (
                             <>
-                            <button onClick={() => abrirModalEdicion(mat)} className="p-2 text-gray-400 hover:text-[var(--color-yacar-azul-vivo)] hover:bg-[var(--color-yacar-azul)]/10 rounded-full transition-colors" title="Editar Material">
+                            <button onClick={() => abrirModalCompra(mat)} className="p-2 text-gray-400 hover:text-[var(--color-yacar-verde)] hover:bg-[var(--color-yacar-verde)]/10 rounded-full transition-colors" title="Registrar Compra (Inflar Stock)">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                            </button>
+
+                            <button onClick={() => abrirModalEdicion(mat)} className="p-2 text-gray-400 hover:text-[var(--color-yacar-azul-vivo)] hover:bg-[var(--color-yacar-azul)]/10 rounded-full transition-colors" title="Editar Nombre/Medida">
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                             </button>
                             

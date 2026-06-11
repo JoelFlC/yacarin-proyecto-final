@@ -25,7 +25,11 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { MailModule } from './mail/mail.module';
 import { RegistroProduccionModule } from './registro-produccion/registro-produccion.module';
 import { TarifasModule } from './tarifas/tarifas.module';
-
+import { DireccionEnvioModule } from './direccion-envio/direccion-envio.module';
+import { PagoModule } from './pago/pago.module';
+import { CompraMaterialModule } from './compra-material/compra-material.module';
+import { CloudinaryModule } from './cloudinary/cloudinary.module';
+import { SeederModule } from './seeder/seeder.module';
 
 @Module({
   imports: [
@@ -78,6 +82,11 @@ import { TarifasModule } from './tarifas/tarifas.module';
     MailModule,
     RegistroProduccionModule,
     TarifasModule,
+    DireccionEnvioModule,
+    PagoModule,
+    CompraMaterialModule,
+    CloudinaryModule,
+    SeederModule,
   ],
   controllers: [AppController],
   providers: [

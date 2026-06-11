@@ -18,6 +18,7 @@ type ProductoAdminType = {
     export const Productos = () => {
     const [productos, setProductos] = useState<ProductoAdminType[]>([]);
     const [disenos, setDisenos] = useState<any[]>([]); 
+    const [materiales, setMateriales] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -27,8 +28,19 @@ type ProductoAdminType = {
     const [notificacion, setNotificacion] = useState({ visible: false, mensaje: '', tipo: 'success' });
 
     const [formData, setFormData] = useState({
-        nombre_comercial: '', talla: 'RN', precio_base_usd: '', descuento_mayorista: '', stock_actual: '', imagen_url: '', diseno_id: ''
+        nombre_comercial: '', talla: 'RN', precio_base_usd: '', descuento_mayorista: '', diseno_id: ''
     });
+    const [imagenFile, setImagenFile] = useState<File | null>(null);
+    const [imagenPreviaUrl, setImagenPreviaUrl] = useState<string>('');
+
+    // Estado para Receta y Precios
+    const [receta, setReceta] = useState<{ material_id: string, cantidad: number, nombre: string, costo: number }[]>([]);
+    const [materialSeleccionado, setMaterialSeleccionado] = useState('');
+    const [cantidadMaterial, setCantidadMaterial] = useState('');
+    const [margenGanancia, setMargenGanancia] = useState(30);
+
+    const costoTotalMateriales = receta.reduce((acc, r) => acc + (r.cantidad * r.costo), 0);
+    const precioSugerido = costoTotalMateriales * (1 + (margenGanancia / 100));
 
     const mostrarNotificacion = (mensaje: string, tipo: 'success' | 'error' = 'success') => {
         setNotificacion({ visible: true, mensaje, tipo });
@@ -38,9 +50,14 @@ type ProductoAdminType = {
     const cargarDatosMaestros = async () => {
         try {
         setIsLoading(true);
-        const [prodRes, disenosRes] = await Promise.all([ api.get('/productos'), api.get('/disenos') ]);
+        const [prodRes, disenosRes, matRes] = await Promise.all([ 
+            api.get('/productos'), 
+            api.get('/disenos'),
+            api.get('/materiales')
+        ]);
         setProductos(prodRes.data);
         setDisenos(disenosRes.data.filter((d: any) => d.activo));
+        setMateriales(matRes.data.filter((m: any) => m.activo));
         } catch (error) {
         mostrarNotificacion("Error al cargar datos del servidor.", 'error');
         } finally {
@@ -56,48 +73,98 @@ type ProductoAdminType = {
 
     const abrirModalCreacion = () => {
         setProductoAEditar(null);
-        setFormData({ nombre_comercial: '', talla: 'RN', precio_base_usd: '', descuento_mayorista: '0', stock_actual: '0', imagen_url: '', diseno_id: '' });
+        setFormData({ nombre_comercial: '', talla: 'RN', precio_base_usd: '', descuento_mayorista: '0', diseno_id: '' });
+        setImagenFile(null);
+        setImagenPreviaUrl('');
+        setReceta([]);
+        setMargenGanancia(30);
         setIsModalOpen(true);
     };
 
-    const abrirModalEdicion = (prod: ProductoAdminType) => {
+    const abrirModalEdicion = async (prod: ProductoAdminType) => {
         setProductoAEditar(prod);
         setFormData({
         nombre_comercial: prod.nombre_comercial,
         talla: prod.talla,
         precio_base_usd: prod.precio_base_usd.toString(),
         descuento_mayorista: prod.descuento_mayorista.toString(),
-        stock_actual: prod.stock_actual.toString(),
-        imagen_url: prod.imagen_url || '',
         diseno_id: prod.diseno?.id || '' 
         });
+        setImagenFile(null);
+        setImagenPreviaUrl(prod.imagen_url || '');
+        setMargenGanancia(30);
+        
+        try {
+            const res = await api.get(`/receta-material/producto/${prod.id}`);
+            const recetaCargada = res.data.map((r: any) => ({
+                material_id: r.material.id,
+                cantidad: Number(r.cantidad_requerida),
+                nombre: r.material.nombre,
+                costo: Number(r.material.costo_base_usd),
+                unidad: r.material.unidad_medida || ''
+            }));
+            setReceta(recetaCargada);
+        } catch (error) {
+            console.error("No se pudo cargar la receta", error);
+            setReceta([]);
+        }
+
         setIsModalOpen(true);
+    };
+
+    const handleAgregarMaterial = () => {
+        if (!materialSeleccionado || !cantidadMaterial || Number(cantidadMaterial) <= 0) return;
+        const mat = materiales.find(m => m.id === materialSeleccionado);
+        if (!mat) return;
+
+        const existe = receta.find(r => r.material_id === materialSeleccionado);
+        if (existe) {
+            setReceta(receta.map(r => r.material_id === materialSeleccionado ? { ...r, cantidad: r.cantidad + Number(cantidadMaterial) } : r));
+        } else {
+            setReceta([...receta, { material_id: mat.id, nombre: mat.nombre, costo: Number(mat.costo_base_usd), cantidad: Number(cantidadMaterial), unidad: mat.unidad_medida }]);
+        }
+        setMaterialSeleccionado('');
+        setCantidadMaterial('');
+    };
+
+    const handleRemoverMaterial = (id: string) => {
+        setReceta(receta.filter(r => r.material_id !== id));
+    };
+
+    const aplicarSugerencia = () => {
+        setFormData(prev => ({ ...prev, precio_base_usd: precioSugerido.toFixed(2) }));
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            setImagenFile(file);
+            setImagenPreviaUrl(URL.createObjectURL(file));
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
         
-        // 💡 PAYLOAD ESTRICTO
-        const payload: any = {
-        nombre_comercial: formData.nombre_comercial, 
-        talla: formData.talla,
-        precio_base_usd: Number(formData.precio_base_usd), 
-        descuento_mayorista: Number(formData.descuento_mayorista),
-        stock_actual: Number(formData.stock_actual), 
-        imagen_url: formData.imagen_url
-        };
+        // 💡 PAYLOAD ESTRICTO CON FORMDATA
+        const payload = new FormData();
+        payload.append('nombre_comercial', formData.nombre_comercial);
+        payload.append('talla', formData.talla);
+        payload.append('precio_base_usd', formData.precio_base_usd.toString());
+        payload.append('descuento_mayorista', formData.descuento_mayorista.toString());
+        
+        if (formData.diseno_id) payload.append('diseno_id', formData.diseno_id);
+        if (imagenFile) payload.append('imagen', imagenFile);
+
+        const recetaFormateada = receta.map(r => ({ material_id: r.material_id, cantidad_requerida: r.cantidad }));
+        payload.append('receta_json', JSON.stringify(recetaFormateada));
 
         try {
         if (productoAEditar) {
-            // En un PATCH, a veces el backend no deja actualizar la relación del diseño_id, 
-            // pero lo mandamos si está presente.
-            if (formData.diseno_id) payload.diseno_id = formData.diseno_id;
-            
             await api.patch(`/productos/${productoAEditar.id}`, payload);
             mostrarNotificacion("Producto comercial actualizado.");
         } else {
-            payload.diseno_id = formData.diseno_id; // Requerido en POST
             await api.post('/productos', payload);
             mostrarNotificacion("Producto agregado al catálogo.");
         }
@@ -176,26 +243,103 @@ type ProductoAdminType = {
                         </select>
                     </div>
                     <div className="md:col-span-2">
-                        <label className="block text-xs font-bold text-gray-700 mb-1">URL de la Imagen</label>
-                        <input type="url" name="imagen_url" value={formData.imagen_url} onChange={handleInputChange} className="w-full px-3 py-2 border rounded outline-none text-sm" />
+                        <label className="block text-xs font-bold text-gray-700 mb-1">Imagen del Producto</label>
+                        <input type="file" accept="image/*" onChange={handleFileChange} className="w-full px-3 py-2 border rounded outline-none text-sm bg-white" />
+                        {imagenPreviaUrl && (
+                            <div className="mt-2 flex items-center gap-4">
+                                <img src={imagenPreviaUrl} alt="Vista previa" className="h-16 w-16 object-cover rounded-md border" />
+                                <span className="text-xs text-gray-500">Vista previa de la imagen seleccionada</span>
+                            </div>
+                        )}
                     </div>
                     </div>
                 </div>
 
                 <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                    <h3 className="text-sm font-bold text-[var(--color-yacar-verde)] mb-4">Finanzas y Stock</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <h3 className="text-sm font-bold text-[var(--color-yacar-rosa)] mb-4">Receta de Materiales (Fórmula)</h3>
+                    <div className="flex gap-2 items-end mb-4">
+                        <div className="flex-1">
+                            <label className="block text-xs font-bold text-gray-700 mb-1">Material</label>
+                            <select value={materialSeleccionado} onChange={e => setMaterialSeleccionado(e.target.value)} className="w-full px-3 py-2 border rounded outline-none text-sm bg-white">
+                                <option value="">- Seleccione material -</option>
+                                {materiales.map(m => <option key={m.id} value={m.id}>{m.nombre} (Costo: ${Number(m.costo_base_usd).toFixed(2)} / {m.unidad_medida})</option>)}
+                            </select>
+                        </div>
+                        <div className="w-24">
+                            <label className="block text-xs font-bold text-gray-700 mb-1">Cantidad</label>
+                            <input type="number" step="0.01" value={cantidadMaterial} onChange={e => setCantidadMaterial(e.target.value)} className="w-full px-3 py-2 border rounded outline-none text-sm" placeholder="Ej: 0.5" />
+                        </div>
+                        <button type="button" onClick={handleAgregarMaterial} className="bg-[var(--color-yacar-rosa)] hover:bg-[var(--color-yacar-rosa-oscuro)] text-white font-bold py-2 px-4 rounded text-sm transition-colors">
+                            Añadir
+                        </button>
+                    </div>
+                    {receta.length > 0 ? (
+                        <div className="border border-gray-200 rounded-lg overflow-hidden bg-white text-sm">
+                            <table className="w-full text-left">
+                                <thead className="bg-gray-100 border-b">
+                                    <tr>
+                                        <th className="px-3 py-2 font-bold">Material</th>
+                                        <th className="px-3 py-2 font-bold text-center">Cant.</th>
+                                        <th className="px-3 py-2 font-bold text-right">Subtotal</th>
+                                        <th className="px-3 py-2"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {receta.map(r => (
+                                        <tr key={r.material_id} className="border-b last:border-b-0">
+                                            <td className="px-3 py-2">{r.nombre}</td>
+                                            <td className="px-3 py-2 text-center">{r.cantidad} {(r as any).unidad}</td>
+                                            <td className="px-3 py-2 text-right font-mono">${(r.cantidad * r.costo).toFixed(2)}</td>
+                                            <td className="px-3 py-2 text-right">
+                                                <button type="button" onClick={() => handleRemoverMaterial(r.material_id)} className="text-red-500 hover:text-red-700 font-bold">✕</button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                        <p className="text-xs text-center text-gray-500">Agrega materiales para construir el producto.</p>
+                    )}
+                </div>
+
+                <div className="bg-[var(--color-yacar-verde)]/10 p-4 rounded-lg border border-[var(--color-yacar-verde)]/30">
+                    <h3 className="text-sm font-bold text-[var(--color-yacar-verde)] mb-4">Finanzas Inteligentes</h3>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-4 items-center">
+                        <div className="bg-white p-3 rounded shadow-sm text-center">
+                            <p className="text-xs text-gray-500 uppercase tracking-wide font-bold">Costo Materiales</p>
+                            <p className="text-lg font-mono font-bold text-gray-800">${costoTotalMateriales.toFixed(2)}</p>
+                        </div>
+                        
+                        <div>
+                            <label className="block text-xs font-bold text-gray-700 mb-1 text-center">Margen de Ganancia (%)</label>
+                            <div className="flex items-center justify-center gap-2">
+                                <button type="button" onClick={() => setMargenGanancia(m => Math.max(0, m - 5))} className="bg-white border w-8 h-8 rounded flex items-center justify-center font-bold text-gray-600">-</button>
+                                <span className="font-bold text-lg text-[var(--color-yacar-verde)] w-12 text-center">{margenGanancia}%</span>
+                                <button type="button" onClick={() => setMargenGanancia(m => m + 5)} className="bg-white border w-8 h-8 rounded flex items-center justify-center font-bold text-gray-600">+</button>
+                            </div>
+                        </div>
+
+                        <div className="bg-white p-3 rounded shadow-sm text-center border-l-4 border-[var(--color-yacar-verde)]">
+                            <p className="text-xs text-gray-500 uppercase tracking-wide font-bold">Sugerencia (PVP)</p>
+                            <p className="text-xl font-mono font-bold text-[var(--color-yacar-verde)]">${precioSugerido.toFixed(2)}</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1">Precio Retail (USD)</label>
-                        <input type="number" step="0.01" name="precio_base_usd" value={formData.precio_base_usd} onChange={handleInputChange} required className="w-full px-3 py-2 border rounded outline-none text-sm" />
+                        <label className="block text-xs font-bold text-gray-700 mb-1">Precio Retail Final (USD)</label>
+                        <div className="flex gap-2">
+                            <input type="number" step="0.01" name="precio_base_usd" value={formData.precio_base_usd} onChange={handleInputChange} required className="w-full px-3 py-2 border rounded outline-none text-sm font-mono font-bold text-blue-700" />
+                            <button type="button" onClick={aplicarSugerencia} className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold px-3 py-1 rounded transition-colors whitespace-nowrap">
+                                ← Aplicar Sugerencia
+                            </button>
+                        </div>
                     </div>
                     <div>
                         <label className="block text-xs font-bold text-gray-700 mb-1">Desc. Mayorista (USD)</label>
                         <input type="number" step="0.01" name="descuento_mayorista" value={formData.descuento_mayorista} onChange={handleInputChange} required className="w-full px-3 py-2 border rounded outline-none text-sm" />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1">Stock Físico</label>
-                        <input type="number" name="stock_actual" value={formData.stock_actual} onChange={handleInputChange} required className="w-full px-3 py-2 border rounded outline-none text-sm" />
                     </div>
                     </div>
                 </div>
