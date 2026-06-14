@@ -15,11 +15,10 @@ export class UsuariosService {
     @InjectRepository(Usuario)
     private readonly usuarioRepository: Repository<Usuario>,
     
-    // Inyectamos DataSource para manejar transacciones seguras (QueryRunner)
     private readonly dataSource: DataSource,
   ) {}
 
-  // Creación normal de usuarios (Clientes públicos / Auto-registro)
+
   async create(createUsuarioDto: CreateUsuarioDto) {
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(createUsuarioDto.password, saltRounds);
@@ -37,14 +36,13 @@ export class UsuariosService {
     return await this.usuarioRepository.save(nuevoUsuario);
   }
 
-  // Creación Administrativa de Empleados (Con transacciones y JSONB)
+
   async crearEmpleado(createEmpleadoDto: CreateEmpleadoDto) {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-      // 1. Verificar si el correo ya existe
       const usuarioExistente = await queryRunner.manager.findOne(Usuario, {
         where: { email: createEmpleadoDto.email },
       });
@@ -53,11 +51,11 @@ export class UsuariosService {
         throw new BadRequestException('El correo ya está registrado en el sistema.');
       }
 
-      // 2. Encriptar la contraseña
+
       const salt = await bcrypt.genSalt();
       const passwordHash = await bcrypt.hash(createEmpleadoDto.password, salt);
 
-      // 3. Crear el Usuario Base
+
       const nuevoUsuario = queryRunner.manager.create(Usuario, {
         email: createEmpleadoDto.email,
         password_hash: passwordHash,
@@ -69,14 +67,13 @@ export class UsuariosService {
       });
       const usuarioGuardado = await queryRunner.manager.save(nuevoUsuario);
 
-      // 4. Crear el perfil de EMPLEADO acoplado al ID del usuario
+  
       const nuevoEmpleado = queryRunner.manager.create(Empleado, {
-        // En TypeORM, en relaciones OneToOne, usualmente se pasa la entidad completa
-        // o si definiste el ID primario simplemente como "id", usamos eso:
-        usuario: usuarioGuardado, // o usa id: usuarioGuardado.id si tienes @PrimaryColumn() id: string
+
+        usuario: usuarioGuardado, 
         especialidades: {
           corte: false,
-          costura: true, // Le damos la especialidad por defecto
+          costura: true, 
           empaque: false,
           tejeduria: false
         },

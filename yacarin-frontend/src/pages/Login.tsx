@@ -27,15 +27,14 @@ export const Login = () => {
   const [errorText, setErrorText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [captchaVal, setCaptchaVal] = useState<string | null>(null);
-  
-  // Referencia y estado exclusivo para el reCAPTCHA
+
   const recaptchaRef = useRef<ReCAPTCHA>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorText('');
 
-    // 1. Validamos que el usuario haya resuelto el Captcha primero
+
     if (!captchaVal) {
       setErrorText('Por favor, completa el CAPTCHA de seguridad.');
       return;
@@ -44,20 +43,19 @@ export const Login = () => {
     setIsLoading(true);
 
     try {
-      // 2. Validamos los campos de texto
       loginSchema.parse({ email, password });
-      
-      // 3. Enviamos toda la información al backend
+
       const response = await api.post('/auth/login', { 
         email, 
         password,
       });
       
       // 4. Guardamos el token, rol, e id y redirigimos dinámicamente
-      const { access_token, rol, usuario_id } = response.data;
+      const { access_token, rol, usuario_id, nombre_completo } = response.data;
       localStorage.setItem('access_token', access_token);
       localStorage.setItem('rol', rol);
       localStorage.setItem('usuario_id', usuario_id);
+      localStorage.setItem('nombre_completo', nombre_completo || 'Usuario');
 
       if (rol === 'ADMINISTRADOR') {
         navigate('/admin');

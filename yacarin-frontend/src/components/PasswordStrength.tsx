@@ -33,12 +33,12 @@ export const PasswordStrength: React.FC<PasswordStrengthProps> = ({ password }) 
         }
     };
 
-   
+
     const getStrengthText = () => {
         if (password.length === 0) return 'Ingresa una contraseña';
         if (strength <= 1) return 'Débil: Agrega números y mayúsculas';
         if (strength <= 3) return 'Buena: Faltan símbolos especiales';
-        return '¡Contraseña muy segura!';
+        return 'Constraseña segura';
     };
 
     return (

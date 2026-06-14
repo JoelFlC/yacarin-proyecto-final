@@ -2,23 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../services/api';
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    Title,
+    Tooltip,
+    Legend,
 } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
 
 ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    Title,
+    Tooltip,
+    Legend
 );
 
 export const Dashboard = () => {
@@ -180,7 +180,7 @@ export const Dashboard = () => {
 
         </div>
 
-        {/* SECCIÓN DE GRÁFICOS SIMULADOS Y ACCESOS RÁPIDOS */}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
             {/* Gráfico Real con Chart.js */}

@@ -15,7 +15,7 @@ import { RegisterDto } from './dto/register.dto';
 
 @Injectable()
 export class AuthService {
-    // ÚNICO CONSTRUCTOR: Aquí inyectamos todas las dependencias necesarias
+
     constructor(
         private readonly usuariosService: UsuariosService,
         private readonly jwtService: JwtService,
@@ -24,22 +24,20 @@ export class AuthService {
     ) { }
 
     async login(loginDto: LoginDto) {
-        // 1. Buscamos al usuario por su correo
+
         const usuario = await this.usuariosService.findOneByEmail(loginDto.email);
 
-        // 2. Si no existe, lanzamos error 401 (No Autorizado)
         if (!usuario) {
             throw new UnauthorizedException('Credenciales incorrectas');
         }
 
-        // 3. Comparamos la contraseña enviada con el Hash de la base de datos
+
         const isPasswordValid = await bcrypt.compare(loginDto.password, usuario.password_hash);
 
         if (!isPasswordValid) {
             throw new UnauthorizedException('Credenciales incorrectas');
         }
 
-        // Determinar el rol del usuario verificando en qué tablas existe
         let rol = 'CLIENTE';
 
         const esAdmin = await this.dataSource.getRepository(Administrador).findOne({ where: { usuario_id: usuario.id } });
@@ -52,14 +50,15 @@ export class AuthService {
             }
         }
 
-        // 4. Si todo es correcto, preparamos la información que viajará dentro del Token (Payload)
+
         const payload = { sub: usuario.id, email: usuario.email, rol };
 
-        // 5. Devolvemos el Token firmado y datos adicionales útiles
+        // 5. token JWT
         return {
             access_token: this.jwtService.sign(payload),
             rol,
-            usuario_id: usuario.id
+            usuario_id: usuario.id,
+            nombre_completo: `${usuario.nombre} ${usuario.apPat}`
         };
     }
 
@@ -69,7 +68,7 @@ export class AuthService {
         await queryRunner.startTransaction();
 
         try {
-            // 1. Verificar si el correo ya existe
+
             const usuarioExistente = await queryRunner.manager.findOne(Usuario, {
                 where: { email: registerDto.email },
             });
@@ -126,8 +125,6 @@ export class AuthService {
     async solicitarRecuperacion(email: string) {
         const usuario = await this.dataSource.getRepository(Usuario).findOne({ where: { email } });
 
-        // Por seguridad, si el correo no existe, no lanzamos error, devolvemos éxito silencioso 
-        // para evitar que atacantes descubran qué correos están registrados.
         if (!usuario) {
             return { message: 'Si el correo existe, se han enviado las instrucciones.' };
         }

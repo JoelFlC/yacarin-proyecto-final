@@ -44,7 +44,12 @@ export const EmpleadoDashboard = () => {
         fetchData();
     }, [usuarioId, rol, navigate]);
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
+        try {
+            await api.post('/auth/logout');
+        } catch (e) {
+            console.error(e);
+        }
         localStorage.removeItem('access_token');
         localStorage.removeItem('rol');
         localStorage.removeItem('usuario_id');

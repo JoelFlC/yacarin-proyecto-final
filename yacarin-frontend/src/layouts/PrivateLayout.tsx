@@ -1,11 +1,17 @@
 import { Outlet, NavLink, useNavigate, Navigate } from 'react-router-dom';
-import logoYacarin from '../assets/img/logo2.png'; // Reutilizamos tu logo
+import logoYacarin from '../assets/img/logo2.png';
+import { api } from '../services/api';
 
 export const PrivateLayout = () => {
   const navigate = useNavigate();
 
   // Función para cerrar sesión de forma segura
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch (e) {
+      console.error(e);
+    }
     localStorage.removeItem('access_token');
     localStorage.removeItem('rol');
     localStorage.removeItem('usuario_id');
@@ -13,8 +19,10 @@ export const PrivateLayout = () => {
   };
 
   const rol = localStorage.getItem('rol');
+  const nombreCompleto = localStorage.getItem('nombre_completo') || 'Admin Yacarín';
+  const primeraLetra = nombreCompleto.charAt(0).toUpperCase();
   
-  // Protección de Ruta: Solo administradores pueden ver este layout
+  // Redirigir si no hay token o no es administradores pueden ver este layout
   if (rol !== 'ADMINISTRADOR') {
     return <Navigate to={rol === 'EMPLEADO' ? '/empleado' : '/'} replace />;
   }
@@ -123,10 +131,10 @@ export const PrivateLayout = () => {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3 border-r border-gray-200 pr-4">
               <div className="w-9 h-9 rounded-full bg-[var(--color-yacar-surface)] border border-[var(--color-yacar-azul)] flex items-center justify-center text-[var(--color-yacar-azul-vivo)] font-bold">
-                A
+                {primeraLetra}
               </div>
               <div className="hidden sm:block text-sm">
-                <p className="font-bold text-[var(--color-yacar-texto)] leading-tight">Admin Yacarín</p>
+                <p className="font-bold text-[var(--color-yacar-texto)] leading-tight">{nombreCompleto}</p>
                 <p className="text-xs text-gray-500">Superusuario</p>
               </div>
             </div>

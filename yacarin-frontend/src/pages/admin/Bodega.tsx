@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { Button } from '../../components/Button';
 
-// 💡 1. INTERFAZ ACTUALIZADA AL CONTRATO DEL BACKEND
+
 type MaterialType = {
     id: string;
     nombre: string;
     unidad_medida: string; 
-    costo_base_usd: number; // 💡 Corregido
+    costo_base_usd: number; 
     stock_actual: number;
-    activo: boolean; // 💡 Agregado según el backend
+    activo: boolean; // 
 };
 
     export const Bodega = () => {
